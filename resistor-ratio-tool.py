@@ -14,25 +14,24 @@ except:
     print("Error loading JSON file `%s`" % resistor_sets_filename)
     sys.exit(1)
 
-def findresistors(ratio, resset=resistor_sets["E96"]):
-    resset = [x for x in resset]
-    checkset = [x for x in resset]
-    if ratio<1:
-        ratio = 1/ratio
-    maxideal = resset[-1]*ratio
-    ctmp = [x for x in resset]
-    while maxideal >= checkset[-2]:
+def find_resistors_for_ratio(ratio, resistor_set=resistor_sets["E96"]):
+    check_set = [r for r in resistor_set]
+    flipped_ratio = ratio < 1.0
+    if flipped_ratio:
+        ratio = 1.0/ratio
+    max_ideal = resistor_set[-1]*ratio
+    ctmp = [x for x in resistor_set]
+    while max_ideal >= check_set[-2]:
         ctmp = [10*x for x in ctmp]
-        checkset.extend([x for x in ctmp])
-    print(len(checkset))
-    bestpair = (1,checkset[0],checkset[0])
-    for res in resset:
-        ideal = ratio*res
-        cinx = bisect_left(checkset, ideal)
-        rr1 = checkset[cinx-1]/res
-        rr2 = checkset[cinx]/res
-        if(abs(bestpair[0]-ratio) > abs(rr1-ratio)):
-            bestpair = (rr1, checkset[cinx-1], res)
-        if(abs(bestpair[0]-ratio) > abs(rr2-ratio)):
-            bestpair = (rr2, checkset[cinx], res)
-    return bestpair
+        check_set.extend([x for x in ctmp])
+    best_pair = (1.0,check_set[0],check_set[0])
+    for resistor in resistor_set:
+        ideal = ratio * resistor
+        target_index = bisect_left(check_set, ideal)
+        poss_ratio_1 = check_set[target_index-1] / resistor
+        poss_ratio_2 = check_set[target_index] / resistor
+        if(abs(best_pair[0]-ratio) > abs(poss_ratio_1-ratio)):
+            best_pair = (poss_ratio_1, check_set[target_index-1], resistor)
+        if(abs(best_pair[0]-ratio) > abs(poss_ratio_2-ratio)):
+            best_pair = (poss_ratio_2, check_set[target_index], resistor)
+    return best_pair if not flipped_ratio else (1.0/best_pair[0], best_pair[2], best_pair[1])
