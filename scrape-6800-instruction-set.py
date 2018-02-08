@@ -38,7 +38,10 @@ for scrape in scrape_ranges:
             mode = [x.strip() for x in row[i].split(mode_split)]
             if len(mode[0]) > 0:
                 # this mode actually exists
-                modes[headers[i]] = (mode[0], int(mode[1]), int(mode[2]))
+                modes[headers[i]] = (mode[0], int(mode[1], 16), int(mode[2], 16))
+        for i, val in enumerate(row[8]):
+            if val != empty_cc:
+                cond_codes[cc_key[i]] = val
         instruction_set.append(operation)
             
         
