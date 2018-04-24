@@ -1,47 +1,51 @@
-import requests
-import sys
+import requests, sys, re, json
 
-url = "http://www.electronics.dit.ie/staff/tscarff/6800/Instructions/instructions.htm"
+name = "6800 Instruction Set Scraper, Neil Thistlethwaite"
+version = "0.1"
+url = "http://www.8bit-era.cz/6800.html"
+output_json = "6800-instruction-set.json"
 
 req = requests.get(url)
 raw_text = None
 if req.ok:
     print("Fetched Instruction Set with Status Code %d" % req.status_code)
-    raw_text = req.text.replace("<!--mstheme--></font><pre>","")
+    raw_text = req.text
 else:
     print("Error fetching URL '%s'" % url)
     sys.exit(1)
 
 instruction_set = []
-dat = raw_text.split("\n")
+dat = raw_text.split("\n")[174:371]
 
-headers = [x.strip() for x in dat[27].replace("<b>","").replace("</b>","").split("|")]
-cc_key = dat[28].split("|")[8]
-last_operation = None
-scrape_ranges = [(30,95),(101,112),(118,133),(139,147),(153,161)]
-start_index = 30
+last_main = ""
 
-mode_split = chr(183)
-empty_cc = chr(149)
+## Format of instructions:
+## (mnemonic, syntax, mode, opcode, bytes, mpu cycles)
 
+for line in dat:
+    info = re.sub(r"!+","\n",
+           re.sub("<a.+?>|<tr>|<td.*?>|</a>|</td>|</tr>","!",
+                  re.sub(r"\s+"," ",
+                  re.sub("<a.+?>|</a>"," ", line))
+                  ).replace("\t","").strip()
+           ).split("\n")[1:7]
 
-for scrape in scrape_ranges:
-    for idx in range(*scrape):
-        row = [x.strip() for x in dat[idx].split("|")]
-        if len(row[0]) > 0:
-            last_operation = row[0]
-        # (mnemonic, word desc, op desc, modes {}, condition codes {})
-        modes = {}
-        cond_codes = {}
-        operation = (row[1], last_operation, row[7], modes, cond_codes)
-        for i in range(2, 7):
-            mode = [x.strip() for x in row[i].split(mode_split)]
-            if len(mode[0]) > 0:
-                # this mode actually exists
-                modes[headers[i]] = (mode[0], int(mode[1], 16), int(mode[2], 16))
-        for i, val in enumerate(row[8]):
-            if val != empty_cc:
-                cond_codes[cc_key[i]] = val
-        instruction_set.append(operation)
-            
+    ## 'Last Main' keeps track of the leading header from previous rows
+    if len(info[0].strip()) > 0:
+        last_main = info[0].strip()
         
+    ## We want to turn "ADD A" and "ADD B" under syntax into "ADDA" and "ADDB" for mnemonics
+    syntax = info[1].strip()
+    main = last_main
+    if syntax[:len(last_main)] == last_main and len(syntax) > len(last_main) + 1 and syntax[len(last_main)] == " " and syntax[len(last_main)+1] in "AB":
+        main = last_main + syntax[len(last_main)+1]
+    instruction_set.append((main, syntax, info[2].strip(), info[4].strip(), int(info[3].strip()), int(info[5].strip())))
+
+print("Instruction Set page parsed")
+
+header_info = {"name":name, "version":version, "source":url, "instruction_set":instruction_set}
+
+with open(output_json,"w") as f:
+    f.write(json.dumps(header_info))
+
+print("Instruction Set dumped to JSON file: %s" % output_json)
