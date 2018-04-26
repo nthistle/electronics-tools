@@ -18,14 +18,29 @@ def translate_instructions(raw, ins_set):
         raw = raw.split() # If space split
     else:
         raw = [raw[i:i+2] for i in range(0,len(raw),2)] # If conjoined
-        
+
+    is_indexed = False
     for byte in raw:
         if bytes_left > 0:
-            output_str += " " + byte
+            output_str += byte
             bytes_left -= 1
+            if bytes_left == 0 and is_indexed:
+                output_str += ",X"
+                is_indexed = False
         else:
             output_str += "\n" + instruction_dict[byte][0]
             bytes_left = instruction_dict[byte][4]-1
+            if instruction_dict[byte][2] == "IMM":
+                output_str += " #$"
+            elif instruction_dict[byte][2] == "DIR":
+                output_str += " $"
+            elif instruction_dict[byte][2] == "EXT":
+                output_str += " $"
+            elif instruction_dict[byte][2] == "IDX":
+                output_str += " $"
+                is_indexed = True
+            elif instruction_dict[byte][2] == "REL":
+                output_str += " $"
 
     return output_str[1:]
         
