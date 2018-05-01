@@ -1,6 +1,8 @@
 import sys
 import json
 
+if sys.version_info[0] < 3:
+    input = raw_input
 
 ## Format of instructions:
 ## (mnemonic, syntax, mode, opcode, bytes, mpu cycles)
