@@ -22,6 +22,7 @@ def translate_instructions(raw, ins_set):
         raw = [raw[i:i+2] for i in range(0,len(raw),2)] # If conjoined
 
     is_indexed = False
+    is_relative = False
     for byte in raw:
         if bytes_left > 0:
             output_str += byte
@@ -29,6 +30,13 @@ def translate_instructions(raw, ins_set):
             if bytes_left == 0 and is_indexed:
                 output_str += ",X"
                 is_indexed = False
+            elif bytes_left == 0 and is_relative:
+                val = int(byte,16)
+                if val & 0x80: #signed
+                    val = (val ^ 0xFF)+1
+                    output_str += " (-%d)"%val
+                else:
+                    output_str += " (+%d)"%val
         else:
             output_str += "\n" + instruction_dict[byte][0]
             bytes_left = instruction_dict[byte][4]-1
@@ -43,6 +51,7 @@ def translate_instructions(raw, ins_set):
                 is_indexed = True
             elif instruction_dict[byte][2] == "REL":
                 output_str += " $"
+                is_relative = True
 
     return output_str[1:]
         
